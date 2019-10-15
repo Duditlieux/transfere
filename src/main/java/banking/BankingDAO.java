@@ -20,19 +20,22 @@ public class BankingDAO {
 	 * @throws SQLException 
 	 */
 	public float balanceForCustomer(int id) throws SQLException {
-		float result = 0.0f;
-		String sql = "SELECT Total FROM Account WHERE CustomerID = ?";
-		try ( 	Connection myConnection = myDataSource.getConnection(); 
-			PreparedStatement statement = myConnection.prepareStatement(sql)) {
-			statement.setInt(1, id); // On fixe le 1° paramètre de la requête
-			try (ResultSet resultSet = statement.executeQuery()) {
-				if (resultSet.next()) { // est-ce qu'il y a un résultat ? (pas besoin de "while", il y a au plus un enregistrement)
-					// On récupère les champs de l'enregistrement courant
-					result = resultSet.getFloat("Total");
-				}
-			}
-		}
-		return result;
+            float result = 0.0f;
+            String sql = "SELECT Total FROM Account WHERE CustomerID = ?";
+            try ( 	Connection myConnection = myDataSource.getConnection(); 
+                PreparedStatement statement = myConnection.prepareStatement(sql)) {
+                statement.setInt(1, id); // On fixe le 1° paramètre de la requête
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (resultSet.next()) { // est-ce qu'il y a un résultat ? (pas besoin de "while", il y a au plus un enregistrement)
+                        // On récupère les champs de l'enregistrement courant
+                        result = resultSet.getFloat("Total");
+                    }
+                    else{
+                        throw new SQLException();
+                    }
+                }
+            }
+            return result;
 	}
 	
 	/**
@@ -42,36 +45,37 @@ public class BankingDAO {
 	 * @param amount le montant à trasférer (positif ou nul)
 	 * @throws java.lang.Exception si quelque chose ne marche pas
 	 */
-	public void bankTransferTransaction(int fromID, int toID, float amount) throws Exception {
-		if (amount < 0)
-			throw new IllegalArgumentException("Le montant ne doit pas être négatif");
-	
-		String sql = "UPDATE Account SET Total = Total + ? WHERE CustomerID = ?";
-		try (	Connection myConnection = myDataSource.getConnection();
-			PreparedStatement statement = myConnection.prepareStatement(sql)) {
-			
-			myConnection.setAutoCommit(false); // On démarre une transaction
-			try {
-				// On débite le 1° client
-				statement.setFloat( 1, amount * -1);
-				statement.setInt(2, fromID);
-				int numberUpdated = statement.executeUpdate();
+    public void bankTransferTransaction(int fromID, int toID, float amount) throws Exception {
 
-				// On crédite le 2° client
-				statement.clearParameters();
-				statement.setFloat( 1, amount);
-				statement.setInt(2, toID);
-				numberUpdated = statement.executeUpdate();
+        if (amount < 0 || (balanceForCustomer(fromID) - amount) < 0)
+            throw new IllegalArgumentException("Le montant ne doit pas être négatif");
 
-				// Tout s'est bien passé, on peut valider la transaction
-				myConnection.commit();
-			} catch (Exception ex) {
-				myConnection.rollback(); // On annule la transaction
-				throw ex;       
-			} finally {
-				 // On revient au mode de fonctionnement sans transaction
-				myConnection.setAutoCommit(true);				
-			}
-		}
-	}
+        String sql = "UPDATE Account SET Total = Total + ? WHERE CustomerID = ?";
+        try (	Connection myConnection = myDataSource.getConnection();
+            PreparedStatement statement = myConnection.prepareStatement(sql)) {
+
+            myConnection.setAutoCommit(false); // On démarre une transaction
+            try {
+                // On débite le 1° client
+                statement.setFloat( 1, amount * -1);
+                statement.setInt(2, fromID);
+                int numberUpdated = statement.executeUpdate();
+
+                // On crédite le 2° client
+                statement.clearParameters();
+                statement.setFloat( 1, amount);
+                statement.setInt(2, toID);
+                numberUpdated = statement.executeUpdate();
+                //System.out.println(numberUpdated);
+                // Tout s'est bien passé, on peut valider la transaction
+                myConnection.commit();
+            } catch (Exception ex) {
+                myConnection.rollback(); // On annule la transaction
+                throw ex;       
+            } finally {
+                // On revient au mode de fonctionnement sans transaction
+                myConnection.setAutoCommit(true);				
+            }
+        }
+    }
 }

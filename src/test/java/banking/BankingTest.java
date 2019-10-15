@@ -48,6 +48,11 @@ public class BankingTest {
 		// Le dernier paramètre correspond à la marge d'erreur tolérable
 		assertEquals("Balance incorrecte !", 100.0f, balance, 0.001f);
 	}
+        
+        @Test (expected = Exception.class)
+        public void findExistingCustomerTest() throws SQLException {
+            myDAO.balanceForCustomer(2);
+	}
 
 	@Test
 	public void successfulTransfer() throws Exception {
@@ -71,5 +76,20 @@ public class BankingTest {
 		ds.setUser("sa");
 		ds.setPassword("sa");
 		return ds;
-	}	
+	}
+        
+        @Test (expected = Exception.class)
+        public void bankTransferTransactionTest1() throws Exception {
+            myDAO.bankTransferTransaction(0, 1, -1f);
+        }
+        
+        @Test (expected = Exception.class)
+        public void bankTransferTransactionTest2() throws Exception {
+            myDAO.bankTransferTransaction(0, 1, myDAO.balanceForCustomer(0)+1);
+        }
+        
+        @Test (expected = Exception.class)
+        public void bankTransferTransactionTest3() throws Exception{
+            myDAO.bankTransferTransaction(2, 1, 0);
+        }
 }
